@@ -14,6 +14,10 @@ MM10_CHROM_SIZES="position/mm10.chrom.sizes"
 OUTPUT_DIR="position/aligning_bases_by_chrom"
 # Python executable (use python3 if python defaults to python2)
 PYTHON_EXEC="python"
+# Maximum number of concurrent jobs
+MAX_JOBS=100
+# Log file for PIDs
+PID_LOG_FILE="${OUTPUT_DIR}/job_pids.log"
 # --- End Configuration ---
 
 # Check if the python script exists
@@ -39,7 +43,14 @@ fi
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-echo "Starting processing of axtNet files..."
+# Clear or create the PID log file at the start
+> "$PID_LOG_FILE"
+
+echo "Starting processing of axtNet files (max ${MAX_JOBS} parallel jobs)..."
+echo "Logging PIDs to ${PID_LOG_FILE}"
+
+# Initialize job counter
+job_count=0
 
 # Loop through all relevant axtNet files in the directory
 for axt_file in "$AXTNET_DIR"/chr*.hg19.mm10.net.axt.gz
@@ -55,21 +66,45 @@ do
         # Construct the output filename (e.g., hg19.chr21.mm10.basepair.gz)
         output_filename="${OUTPUT_DIR}/hg19.${chr_name}.mm10.basepair.gz"
 
-        echo "Processing $base_filename -> $output_filename"
+        echo "Launching job for $base_filename -> $output_filename"
 
-        # Run the python script
-        "$PYTHON_EXEC" "$PYTHON_SCRIPT" \
-            -a "$axt_file" \
-            -m "$MM10_CHROM_SIZES" \
-            -o "$output_filename"
+        # Run the python script in the background
+        ( # Start subshell to group commands and capture exit status
+            "$PYTHON_EXEC" "$PYTHON_SCRIPT" \
+                -a "$axt_file" \
+                -m "$MM10_CHROM_SIZES" \
+                -o "$output_filename"
 
-        # Optional: Check exit status of the python script
-        if [ $? -ne 0 ]; then
-            echo "Error processing $base_filename. Check the output/error messages."
+            # Optional: Check exit status of the python script
+            if [ $? -ne 0 ]; then
+                echo "Error processing $base_filename. Check the output/error messages."
+            # else
+            #    echo "Finished job for $base_filename" # Uncomment for more verbose output
+            fi
+            echo "--- Job for ${base_filename} finished ---" # Separator
+        ) & # Run the subshell in the background
+
+        # Capture the PID of the last backgrounded process
+        pid=$!
+        echo "Launched PID: ${pid} for file: ${base_filename}" >> "$PID_LOG_FILE"
+
+        # Increment job counter
+        ((job_count++))
+
+        # Check if the maximum number of jobs has been reached
+        if [ "$job_count" -ge "$MAX_JOBS" ]; then
+            echo "Reached max jobs (${MAX_JOBS}), waiting for a job to finish..."
+            # Wait for any background job to finish
+            wait -n
+            # Decrement job counter (optional, as wait -n handles it, but good for clarity)
+             ((job_count--))
         fi
-        echo "---" # Separator
     fi
 done
+
+# Wait for all remaining background jobs to complete
+echo "Waiting for remaining jobs to finish..."
+wait
 
 echo "Processing complete."
 echo "Output files are in $OUTPUT_DIR"
