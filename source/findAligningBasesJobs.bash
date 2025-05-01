@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # --- Configuration ---
-# Path to the LECIF source directory
-LECIF_SOURCE_DIR="lecif-project/source"
+# Path to the LECIF source directory (updated to use absolute path)
+LECIF_SOURCE_DIR="$(dirname "$0")"
 # Path to the findAligningBases.py script
 PYTHON_SCRIPT="${LECIF_SOURCE_DIR}/findAligningBases.py"
 # Directory containing the downloaded axtNet files
@@ -19,6 +19,7 @@ PYTHON_EXEC="python"
 # Check if the python script exists
 if [ ! -f "$PYTHON_SCRIPT" ]; then
     echo "Error: Python script not found at $PYTHON_SCRIPT"
+    echo "Hint: The path should be relative to where you're executing the script from, not relative to this script's location"
     exit 1
 fi
 
