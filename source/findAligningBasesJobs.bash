@@ -18,6 +18,8 @@ PYTHON_EXEC="python"
 MAX_JOBS=100
 # Log file for PIDs
 PID_LOG_FILE="${OUTPUT_DIR}/job_pids.log"
+# Log file for completion status and timing
+COMPLETION_LOG_FILE="${OUTPUT_DIR}/job_completion.log"
 # --- End Configuration ---
 
 # Check if the python script exists
@@ -43,11 +45,13 @@ fi
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
 
-# Clear or create the PID log file at the start
+# Clear or create the log files at the start
 > "$PID_LOG_FILE"
+> "$COMPLETION_LOG_FILE"
 
 echo "Starting processing of axtNet files (max ${MAX_JOBS} parallel jobs)..."
 echo "Logging PIDs to ${PID_LOG_FILE}"
+echo "Logging completion status and timing to ${COMPLETION_LOG_FILE}"
 
 # Initialize job counter
 job_count=0
@@ -70,23 +74,34 @@ do
 
         # Run the python script in the background
         ( # Start subshell to group commands and capture exit status
+            start_time_inner=$(date +%s.%N) # High-resolution start time
+
             "$PYTHON_EXEC" "$PYTHON_SCRIPT" \
                 -a "$axt_file" \
                 -m "$MM10_CHROM_SIZES" \
                 -o "$output_filename"
 
-            # Optional: Check exit status of the python script
-            if [ $? -ne 0 ]; then
-                echo "Error processing $base_filename. Check the output/error messages."
+            status=$? # Capture exit status
+            end_time_inner=$(date +%s.%N) # High-resolution end time
+
+            # Calculate duration using awk for floating point arithmetic
+            duration=$(awk -v start="$start_time_inner" -v end="$end_time_inner" 'BEGIN {print end - start}')
+
+            # Log completion status, duration, and end time
+            echo "File: ${base_filename} | Duration: ${duration} s | Status: ${status} | End: $(date +'%Y-%m-%d %H:%M:%S')" >> "${COMPLETION_LOG_FILE}"
+
+            # Optional: Echo status to main script output (might be noisy)
+            # if [ $status -ne 0 ]; then
+            #     echo "Error processing $base_filename (PID: $$). Status: $status. Duration: ${duration} s."
             # else
-            #    echo "Finished job for $base_filename" # Uncomment for more verbose output
-            fi
-            echo "--- Job for ${base_filename} finished ---" # Separator
+            #    echo "Finished job for $base_filename (PID: $$). Duration: ${duration} s."
+            # fi
         ) & # Run the subshell in the background
 
         # Capture the PID of the last backgrounded process
         pid=$!
-        echo "Launched PID: ${pid} for file: ${base_filename}" >> "$PID_LOG_FILE"
+        # Log PID, filename and launch time
+        echo "PID: ${pid} | File: ${base_filename} | Start: $(date +'%Y-%m-%d %H:%M:%S')" >> "${PID_LOG_FILE}"
 
         # Increment job counter
         ((job_count++))
@@ -108,3 +123,5 @@ wait
 
 echo "Processing complete."
 echo "Output files are in $OUTPUT_DIR"
+echo "PID logs are in ${PID_LOG_FILE}"
+echo "Completion logs are in ${COMPLETION_LOG_FILE}"
