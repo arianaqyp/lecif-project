@@ -4,7 +4,7 @@
 BASE_URL="https://hgdownload.cse.ucsc.edu/goldenpath/hg19/vsMm10/axtNet/"
 
 # Directory to save the downloaded files
-OUTPUT_DIR="axtNet_files"
+OUTPUT_DIR="position/axtNet"
 
 # Create the output directory if it doesn't exist
 mkdir -p "$OUTPUT_DIR"
