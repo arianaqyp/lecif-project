@@ -63,6 +63,6 @@ nohup source/aggregateAligningBases position/aligning_bases_by_chrom/ position/h
 # 4. Sample 50bp non-overlapping windows using samplePairs.py. [DONE]
 nohup bash -c '( echo "PID: $$"; time python source/samplePairs.py -i position/hg19.mm10.basepair.gz -o position/hg19.mm10.50bp )' > log/samplePairs.log 2>&1 &
 
-# 5. Split the pairs based on whether the human region lies on an odd or even chromosome (X chromosome counts as even) for later use. [R]
+# 5. Split the pairs based on whether the human region lies on an odd or even chromosome (X chromosome counts as even) for later use. [DONE]
 nohup bash -c '( echo "PID: $$"; bash source/splitChroms.bash )' > log/splitChroms.log 2>&1 &
 
