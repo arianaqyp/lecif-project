@@ -1,6 +1,21 @@
 #!/bin/bash
 
+echo "Starting script..."
+echo "PID: $$"
+start_time=$(date +%s)
+echo "Start time: $(date)"
+
 input_dir=$1
 output_filename=$2
 
+echo "Input directory: $input_dir"
+echo "Output file: $output_filename"
+
 for f in `\ls $input_dir*.gz | sort -t '.' -k2,2`; do gzip -cd $f; done | awk -v OFS="\t" '{print $0,NR-1}' | gzip > $output_filename
+
+end_time=$(date +%s)
+duration=$((end_time - start_time))
+
+echo "End time: $(date)"
+echo "Duration: $duration seconds"
+echo "Script finished successfully."
