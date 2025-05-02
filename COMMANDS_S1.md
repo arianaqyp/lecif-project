@@ -53,18 +53,16 @@ Method 1 (killing the process group) is generally the most robust way to ensure 
 Remember to run your script like this:
 
 # 2. To Find aligning genomic regions [DONE]
-nohup bash ./source/findAligningBasesJobs.bash > nohup_job.log 2>&1 &
-```
-
+nohup bash ./source/findAligningBasesJobs.bash > log/nohup_job.log 2>&1 &
 This redirects both standard output and standard error to `nohup_job.log` and puts the initial `nohup` process itself into the background.
 
 
-# 3. To run aggregateAligningBases [RUNNING]
+# 3. To run aggregateAligningBases [DONE]
 nohup source/aggregateAligningBases position/aligning_bases_by_chrom/ position/hg19.mm10.basepair.gz > log/aggregateAligningBases.log 2>&1 &
 
-# 4. Sample 50bp non-overlapping windows using samplePairs.py.
+# 4. Sample 50bp non-overlapping windows using samplePairs.py. [DONE]
 nohup bash -c '( echo "PID: $$"; time python source/samplePairs.py -i position/hg19.mm10.basepair.gz -o position/hg19.mm10.50bp )' > log/samplePairs.log 2>&1 &
 
-# 5. Split the pairs based on whether the human region lies on an odd or even chromosome (X chromosome counts as even) for later use.
+# 5. Split the pairs based on whether the human region lies on an odd or even chromosome (X chromosome counts as even) for later use. [R]
 nohup bash -c '( echo "PID: $$"; bash source/splitChroms.bash )' > log/splitChroms.log 2>&1 &
 
