@@ -13,5 +13,5 @@ nohup bash source/run_all_intersect.bash & echo $! > log/run_all_intersect_rna_s
 
 # Aggregate preprocessed feature data for 1 million genomic region (1 chunk)
 ``` example of one command:
-python source/generateDataThreaded.py -p position/hg19.mm10.50bp.h.gz -ca feature/intersect/hg19_CAGE/ -ch feature/intersect/hg19_ChromHMM/ -dn feature/intersect/hg19_DNaseChIPseq/ -rn feature/intersect/hg19_RNAseq/ -chn 25 -can 1829 -fn 8824 -o data/split/all_1.h.gz -s -c 100 -i 1
+python -u source/generateDataThreaded.py -p position/hg19.mm10.50bp.h.gz -ca feature/intersect/hg19_CAGE/ -ch feature/intersect/hg19_ChromHMM/ -dn feature/intersect/hg19_DNaseChIPseq/ -rn feature/intersect/hg19_RNAseq/ -chn 25 -can 1829 -fn 8824 -o data/split/all_1.h.gz -s -c 5 -i 1
 ```
