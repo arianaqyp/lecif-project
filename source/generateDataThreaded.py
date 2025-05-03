@@ -63,9 +63,10 @@ def readDnaseChipFeature(dnase_chipseq_dir, input_regions, active_indices):
     # Iterate through each file (each experiment in a specific cell/tissue-type and with a specific target if ChIP-seq)
     for i in range(len(dnase_chipseq_files)):
         dnase_chipseq_file = dnase_chipseq_files[i]
-        try:
-            regions = pd.read_table(dnase_chipseq_dir+dnase_chipseq_file, engine='c', header=None, squeeze=True).tolist()
-            valid = list(input_regions.intersection(regions))
+        try:    
+            regions = pd.read_table(dnase_chipseq_dir+dnase_chipseq_file, engine='c', header=None).to_numpy() # shape: (n, 1)
+            # print("Shape of regions: ", regions.shape)
+            valid = list(input_regions.intersection(regions[:,0]))
             for j in range(len(valid)):
                 active_indices[valid[j]].append(i)
         except (pd.errors.EmptyDataError,pd.io.common.EmptyDataError) as _: # Some input file may be empty
@@ -134,6 +135,9 @@ def readCageFeature(cage_dir, input_regions, active_indices, cage_num_experiment
 def readRnaSeqFeature(rnaseq_dir, input_regions, active_indices, feat_index):
     num_current_features = feat_index
     real_values = defaultdict(list) # Key: region index, value: real value for the non-binary features
+    
+    print("Input regions: ", input_regions)
+    print("RNA-seq directory: ", rnaseq_dir)
 
     # List of files containing region indices and their RNA-seq level in different cell-types
     rnaseq_files = sorted(os.listdir(rnaseq_dir))
