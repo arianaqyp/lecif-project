@@ -154,7 +154,7 @@ def readRnaSeqFeature(rnaseq_dir, input_regions, active_indices, feat_index):
             display_str = "\tRNA-seq [" + "=" * p + " "*(100-p) + "] " + str(p)+"% Pos last added {0}".format(last_pos)
             myThread.displayFeatureProgress(4, display_str)
         except (pd.errors.EmptyDataError,pd.io.common.EmptyDataError) as _:
-            #print ('! Empty RNA-seq data file',rnaseq_file,i)
+            print ('! Empty RNA-seq data file',rnaseq_file,i)
             continue
 
     return real_values
@@ -206,6 +206,8 @@ def readFeatures(dnase_chipseq_dir,chromhmm_dir,cage_dir,rnaseq_dir,chromhmm_num
     thread2.join()
     thread3.join()
     thread4.join()
+
+    # ! Real values are None now?
 
     return active_indices,thread4.real_values
 
@@ -302,6 +304,8 @@ def main():
         ends = df[:,2] # region end
         region_indices = df[:,3] # region indices
     print('\t%s regions read' % len(region_indices))
+    # print("Length of region_indices: ", len(region_indices))
+    # print("Region indices: ", region_indices)
 
     ### Read features of the regions of interest from multiple files and write to one output file ###
     with gzip.open(args.output_filename if args.output_filename.endswith('.gz') else args.output_filename+'.gz','wb') as gzf:

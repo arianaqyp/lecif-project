@@ -11,21 +11,23 @@ import sys
 # Base directory where the species/data type directories will be created
 BASE_OUTPUT_DIR = "feature/raw"
 
-# Mapping from CSV file parts (from SupplementaryTable1) to target directories
-# the CSV files are in a subdirectory named 'lecif-project/table/' relative to the script
-CSV_DIR_MAP = {
-    "table/SupplementaryTable1.xlsx - 1b. Human DNase-seq, ChIP-seq.csv": "hg19_DNaseChIPseq",
-    "table/SupplementaryTable1.xlsx - 1c. Human ChromHMM.csv": "hg19_ChromHMM",
-    "table/SupplementaryTable1.xlsx - 1d. Human CAGE.csv": "hg19_CAGE",
-    "table/SupplementaryTable1.xlsx - 1e. Human RNA-seq.csv": "hg19_RNAseq",
-    "table/SupplementaryTable1.xlsx - 1f. Mouse DNase-seq, ChIP-seq.csv": "mm10_DNaseqChIPseq",
-    "table/SupplementaryTable1.xlsx - 1g. Mouse ChromHMM.csv": "mm10_ChromHMM",
-    "table/SupplementaryTable1.xlsx - 1h. Mouse CAGE.csv": "mm10_CAGE",
-    "table/SupplementaryTable1.xlsx - 1i. Mouse RNA-seq.csv": "mm10_RNAseq",
+# Path to the Excel file relative to the script's execution directory
+EXCEL_FILE_PATH = "table/SupplementaryTable1.xlsx"
+
+# Mapping from Excel sheet names to target directories
+SHEET_DIR_MAP = {
+    "1b. Human DNase-seq, ChIP-seq": "hg19_DNaseChIPseq",
+    "1c. Human ChromHMM": "hg19_ChromHMM",
+    # "1d. Human CAGE": "hg19_CAGE",
+    "1e. Human RNA-seq": "hg19_RNAseq",
+    "1f. Mouse DNase-seq, ChIP-seq": "mm10_DNaseqChIPseq",
+    "1g. Mouse ChromHMM": "mm10_ChromHMM",
+    # "1h. Mouse CAGE": "mm10_CAGE",
+    "1i. Mouse RNA-seq": "mm10_RNAseq",
 }
 
 # Column name in the CSV files containing the download links
-URL_COLUMN_NAME = "Download link"
+URL_COLUMN_NAME = "link"
 
 # Maximum number of concurrent downloads
 MAX_WORKERS = 10 # Adjust based on your network capacity
@@ -71,10 +73,18 @@ def download_file(url, target_dir):
         return url, f"Failed (Unexpected error: {e})"
 
 def main():
-    """Main function to read CSVs and trigger downloads."""
+    """Main function to read Excel sheets and trigger downloads."""
+    start_time = time.time() # Record start time
     print(f"Starting download process. Files will be saved under '{BASE_OUTPUT_DIR}'.")
-    print("Please ensure you have 'pandas' and 'requests' installed (`pip install pandas requests`).")
+    # print("Please ensure you have 'pandas', 'requests', and 'openpyxl' installed (`pip install pandas requests openpyxl`).") # Added openpyxl
     print("-" * 30)
+
+    # Construct full path to Excel file and check existence
+    full_excel_path = os.path.join(os.getcwd(), EXCEL_FILE_PATH)
+    print("Looking for Excel file at:", full_excel_path)
+    if not os.path.exists(full_excel_path):
+        print(f"Error: Excel file not found at '{full_excel_path}'. Please ensure the file exists and the path is correct.", file=sys.stderr)
+        sys.exit(1) # Exit if the main Excel file is missing
 
     # Use ThreadPoolExecutor for concurrent downloads
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -82,28 +92,25 @@ def main():
         total_files_to_download = 0
         total_files_processed = 0
 
-        for csv_path, dir_name in CSV_DIR_MAP.items():
+        for sheet_name, dir_name in SHEET_DIR_MAP.items():
             target_directory = os.path.join(BASE_OUTPUT_DIR, dir_name)
-            print(f"\nProcessing: {os.path.basename(csv_path)}")
+            print(f"Processing Sheet: {sheet_name}")
             print(f"Target Directory: {target_directory}")
-
-            # Check if CSV file exists
-            if not os.path.exists(csv_path):
-                print(f"Warning: CSV file not found at '{csv_path}'. Skipping.")
-                continue
 
             # Create target directory if it doesn't exist
             os.makedirs(target_directory, exist_ok=True)
 
             try:
-                # Read URLs from CSV
-                df = pd.read_csv(csv_path)
+                # Read URLs from the specific Excel sheet
+                # Make sure you have an engine like 'openpyxl' installed: pip install openpyxl
+                df = pd.read_excel(full_excel_path, sheet_name=sheet_name)
+                # print(df.head()) # Optional: print head for debugging
                 if URL_COLUMN_NAME not in df.columns:
-                    print(f"Warning: URL column '{URL_COLUMN_NAME}' not found in '{csv_path}'. Skipping.")
+                    print(f"Warning: URL column '{URL_COLUMN_NAME}' not found in sheet '{sheet_name}'. Skipping.")
                     continue
 
                 urls = df[URL_COLUMN_NAME].dropna().unique().tolist()
-                print(f"Found {len(urls)} unique URLs to download.")
+                print(f"Found {len(urls)} unique URLs to download from sheet '{sheet_name}'.")
                 total_files_to_download += len(urls)
 
                 # Submit download tasks to the executor
@@ -111,13 +118,19 @@ def main():
                      if url and isinstance(url, str) and url.strip():
                         futures.append(executor.submit(download_file, url.strip(), target_directory))
                      else:
-                        print(f"Warning: Skipping invalid URL entry: {url}")
+                        print(f"Warning: Skipping invalid URL entry in sheet '{sheet_name}': {url}")
                         total_files_processed += 1 # Count as processed even if skipped
 
             except Exception as e:
-                print(f"Error reading or processing CSV '{csv_path}': {e}")
+                print(f"Error reading or processing sheet '{sheet_name}' from '{full_excel_path}': {e}", file=sys.stderr)
 
-        print(f"\nSubmitted {len(futures)} download tasks across all files.")
+        if not futures:
+             print("No valid URLs found to download across all specified sheets.")
+             print("-" * 30)
+             print("Download process finished (no tasks executed).")
+             return # Exit early if no downloads were submitted
+
+        print(f"Submitted {len(futures)} download tasks across all sheets.")
         print("Waiting for downloads to complete...")
 
         # Process results as they complete
@@ -133,7 +146,9 @@ def main():
 
 
     print("-" * 30)
-    print("Download process finished.")
+    end_time = time.time() # Record end time
+    duration = end_time - start_time
+    print(f"Download process finished in {duration:.2f} seconds.")
 
 if __name__ == "__main__":
     main()

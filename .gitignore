@@ -1,3 +1,10 @@
 position/**/*
+feature/**/*
 *nfs*
 *.log
+*.h.gz
+*.m.gz
+
+*.log
+*.pid
+*.out

@@ -31,7 +31,7 @@ elif [ "$species" -eq "0" ]; then
         for filename in "$directory/"*.bigWig; do
             new_filename=$output_directory"/"`basename "$filename"`".bed"
             echo $new_filename
-            ./bigWigToBedGraph $filename $new_filename
+            bigWigToBedGraph $filename $new_filename
             gzip $new_filename
         done
     fi
@@ -54,7 +54,7 @@ elif [ "$species" -eq "1" ]; then
         for filename in "$directory/"*.bigWig; do
             new_filename=$output_directory"/"`basename "$filename"`".bed"
             echo $new_filename
-            ./bigWigToBedGraph $filename $new_filename
+            bigWigToBedGraph $filename $new_filename
             gzip $new_filename
         done
     fi

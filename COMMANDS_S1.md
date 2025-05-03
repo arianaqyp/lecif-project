@@ -1,3 +1,6 @@
+# Killing processes by user?
+pkill -u $USER -f 'runIntersect|run_all_intersect.bash'
+
 # Killing the Process Group
 You've hit on a common point of confusion with `nohup` and background processes!
 
@@ -55,7 +58,6 @@ Remember to run your script like this:
 # 2. To Find aligning genomic regions [DONE]
 nohup bash ./source/findAligningBasesJobs.bash > log/nohup_job.log 2>&1 &
 This redirects both standard output and standard error to `nohup_job.log` and puts the initial `nohup` process itself into the background.
-
 
 # 3. To run aggregateAligningBases [DONE]
 nohup source/aggregateAligningBases position/aligning_bases_by_chrom/ position/hg19.mm10.basepair.gz > log/aggregateAligningBases.log 2>&1 &
