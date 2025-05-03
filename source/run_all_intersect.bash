@@ -118,6 +118,7 @@ find "${PREPROCESSED_BASE_DIR}" -type f -name "*.gz" -print0 | while IFS= read -
     echo "  WARNING: Cannot determine data type from subdirectory '${subdir_name}'. Skipping file." | tee -a "${LOG_FILE}"
     continue
   fi
+  #########################################################
 
   # Construct output path and create directory
   intersect_output_dir="${INTERSECT_BASE_DIR}/${subdir_name}"

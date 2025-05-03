@@ -11,7 +11,7 @@ PREPROCESSED_BASE_DIR="feature/preprocessed"
 
 # Log file for script output and timing
 # LOG_FILE="log/preprocess_all_features.log"
-LOG_FILE="log/preprocess_all_rna_seq.log"
+LOG_FILE="log/preprocess_all.log"
 
 # Maximum number of concurrent preprocessing jobs
 MAX_CONCURRENT_JOBS=100
@@ -28,13 +28,13 @@ fi
 # Species: 0=Human, 1=Mouse
 # Data Type: 0=DNase/ChIP-seq, 1=ChromHMM, 2=CAGE, 3=RNA-seq
 declare -a tasks=(
-  # "hg19_DNaseChIPseq 0 0"
-  # "hg19_ChromHMM 0 1"
-  # "hg19_CAGE 0 2"
+  "hg19_DNaseChIPseq 0 0"
+  "hg19_ChromHMM 0 1"
+  "hg19_CAGE 0 2"
   "hg19_RNAseq 0 3"
-  # "mm10_DNaseChIPseq 1 0"
-  # "mm10_ChromHMM 1 1"
-  # "mm10_CAGE 1 2"
+  "mm10_DNaseChIPseq 1 0"
+  "mm10_ChromHMM 1 1"
+  "mm10_CAGE 1 2"
   "mm10_RNAseq 1 3"
 )
 

@@ -6,3 +6,4 @@ make
 
 # Wget the binary for bedwidtobedgraph and chmod +x it
 https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/ 
+https://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigToBedGraph (binary file)
