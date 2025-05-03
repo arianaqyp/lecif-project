@@ -113,7 +113,7 @@ def readCageFeature(cage_dir, input_regions, active_indices, cage_num_experiment
     # A file containing region indices and their CAGE peak data across multiple cell-types
     cage_file = os.listdir(cage_dir)[0]
     try:
-        df = pd.read_table(cage_dir+cage_file,engine='c',header=None).as_matrix()
+        df = pd.read_table(cage_dir+cage_file,engine='c',header=None).to_numpy()
         regions = df[:,0] # Position indices
         features = df[:,1:] # Presence of CAGE peak in each region in each experiment
         for i in range(len(regions)):
@@ -141,7 +141,7 @@ def readRnaSeqFeature(rnaseq_dir, input_regions, active_indices, feat_index):
         rnaseq_file = rnaseq_files[i]
         last_pos = int()
         try:
-            df = pd.read_table(rnaseq_dir+rnaseq_file,engine='c',header=None).as_matrix()
+            df = pd.read_table(rnaseq_dir+rnaseq_file,engine='c',header=None).to_numpy()
             regions = df[:,0] # Position indices
             signals = df[:,1] # RNA-seq level of each region in the current cell-type
             for j in range(len(regions)):
@@ -163,7 +163,7 @@ def readRnaSeqFeature(rnaseq_dir, input_regions, active_indices, feat_index):
 def readFeatures(dnase_chipseq_dir,chromhmm_dir,cage_dir,rnaseq_dir,chromhmm_num_states,cage_num_experiments,input_regions):
     active_indices = defaultdict(list) # Key: region index, value: non-zero feature indices for the given region
     cage_file = os.listdir(cage_dir)[0]
-    df = pd.read_table(cage_dir+cage_file,engine='c',header=None).as_matrix()
+    df = pd.read_table(cage_dir+cage_file,engine='c',header=None).to_numpy()
     features = df[:,1:] # presence of CAGE peak in each region in each cell-type
 
     # Feature indices are calcualted pre-emptively for multi-threading to append the correct active_indices values at
@@ -289,7 +289,7 @@ def main():
         split_end = (args.split_index)*args.split_chunk_size
         print ('\tPosition index ranges from %d to %d' % (split_start,split_end))
 
-    df = pd.read_table(args.region_filename,engine='c',header=None,usecols=[0,1,2,3],names=['chr','start','end','index']).as_matrix()
+    df = pd.read_table(args.region_filename,engine='c',header=None,usecols=[0,1,2,3],names=['chr','start','end','index']).to_numpy()
     df = df[df[:,3].argsort()]
     if args.split:
         chrs = df[split_start:split_end,0] # chromsomes
