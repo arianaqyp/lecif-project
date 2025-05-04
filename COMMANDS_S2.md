@@ -16,18 +16,9 @@ nohup bash source/run_all_intersect.bash & echo $! > log/run_all_intersect_rna_s
 python -u source/generateDataThreaded.py -p position/hg19.mm10.50bp.h.gz -ca feature/intersect/hg19_CAGE/ -ch feature/intersect/hg19_ChromHMM/ -dn feature/intersect/hg19_DNaseChIPseq/ -rn feature/intersect/hg19_RNAseq/ -chn 25 -can 1829 -fn 8824 -o data/split/all_1.h.gz -s -c 5 -i 1
 ```
 
-# Aggregate preprocessed feature data for 1 million genomic region
+# Aggregate preprocessed feature data for 1 million genomic region (parallel)
 ```example command:
-python source/countAndProcessRegions.py \
-  -p region/hg19.mm10.50bp.h.gz \
-  -ca feature/intersect/hg19_CAGE/ \
-  -ch feature/intersect/hg19_ChromHMM/ \
-  -dn feature/intersect/hg19_DNaseChIPseq/ \
-  -rn feature/intersect/hg19_RNAseq/ \
-  -chn 25 -can 1829 -fn 8824 \
-  -o data/split/ \
-  --parallel \
-  --max-processes 25
+python source/countAndProcessRegions.py   -p position/hg19.mm10.50bp.h.gz   -ca feature/intersect/hg19_CAGE/   -ch feature/intersect/hg19_ChromHMM/   -dn feature/intersect/hg19_DNaseChIPseq/   -rn feature/intersect/hg19_RNAseq/   -chn 25 -can 1829 -fn 8824   -o data/split/   --parallel   --max-processes 20
 ```
 
 If need to kill:
@@ -48,9 +39,6 @@ tail -f log/chunk_5.log
 ```
 
 ## No need nohup for python script
-
-No, you don't need to run the Python script (`countAndProcessRegions.py`) with nohup in the typical workflow. Here's why:
-
 The implementation follows a two-step process:
 
 1. **Setup Phase** (Python script):

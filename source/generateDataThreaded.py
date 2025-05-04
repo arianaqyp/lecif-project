@@ -76,7 +76,7 @@ def readDnaseChipFeature(dnase_chipseq_dir, input_regions, active_indices):
         # Status output
         p = int((i+1)/len(dnase_chipseq_files)*100)
         display_str = "\tDNase-seq and ChIP-seq [" + "=" * p + " "*(100-p) + "] " + str(p)+"%\t"
-        myThread.displayFeatureProgress(1, display_str)
+        # myThread.displayFeatureProgress(1, display_str)
 
 def readChromHmmFeature(chromhmm_dir, input_regions, active_indices, chromhmm_num_states, feat_index):
     num_current_features = feat_index
@@ -107,7 +107,7 @@ def readChromHmmFeature(chromhmm_dir, input_regions, active_indices, chromhmm_nu
         # Status output
         p = int((i+1)/len(chromhmm_files)*100)
         display_str = "\tChromHMM [" + "=" * p + " "*(100-p) + "] " + str(p)+"%"
-        myThread.displayFeatureProgress(2, display_str)
+        # myThread.displayFeatureProgress(2, display_str)
 
 def readCageFeature(cage_dir, input_regions, active_indices, cage_num_experiments, feat_index):
     num_current_features = feat_index
@@ -127,7 +127,7 @@ def readCageFeature(cage_dir, input_regions, active_indices, cage_num_experiment
             # Status output
             p = int((i+1)/len(regions)*100)
             display_str = "\tCAGE [" + "=" * p + " "*(100-p) + "] " + str(p)+"% {0}".format(len(features[0]))
-            myThread.displayFeatureProgress(3, display_str)
+            # myThread.displayFeatureProgress(3, display_str)
 
         num_current_features += len(features[0])
     except (pd.errors.EmptyDataError) as _:
@@ -153,7 +153,7 @@ def readRnaSeqFeature(rnaseq_dir, input_regions, active_indices, feat_index):
             # Status output
             p = int((i+1)/len(rnaseq_files)*100)
             display_str = "\tRNA-seq [" + "=" * p + " "*(100-p) + "] " + str(p)+"% Pos last added {0}".format(last_pos)
-            myThread.displayFeatureProgress(4, display_str)
+            # myThread.displayFeatureProgress(4, display_str)
         except (pd.errors.EmptyDataError) as _:
             print ('! Empty RNA-seq data file',rnaseq_file,i)
             continue

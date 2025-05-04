@@ -40,6 +40,9 @@ def generate_commands(args, num_regions, num_chunks):
     """Generate commands for processing all chunks."""
     commands = []
     
+    # Determine species identifier (h or m) from the region filename
+    species_id = "h" if ".h.gz" in args.region_filename else "m"
+    
     for i in range(1, num_chunks + 1):
         cmd = [
             f"python source/generateDataThreaded.py",
@@ -51,7 +54,7 @@ def generate_commands(args, num_regions, num_chunks):
             f"-chn {args.chromhmm_num_states}",
             f"-can {args.cage_num_experiments}",
             f"-fn {args.num_features}",
-            f"-o {args.output_dir}/all_{i}.gz",
+            f"-o {args.output_dir}/all_{i}_{species_id}.gz",
             "-s",
             f"-c {args.chunk_size}",
             f"-i {i}"
@@ -159,7 +162,7 @@ def create_shell_script(commands, output_script, parallel=False, max_processes=N
                 f.write(f"    cmd{i}=({cmd})\n")
             
             f.write("\n    # Run commands with parallel\n")
-            f.write("    parallel -j {} run_with_parallel {1} {2} ::: ".format(max_processes))
+            f.write("    parallel -j {} run_with_parallel {{1}} {{2}} ::: ".format(max_processes))
             cmd_refs = [f"{i} \"${{cmd{i}[@]}}\"" for i in range(1, len(commands) + 1)]
             f.write(" ".join(cmd_refs))
             f.write("\n")
@@ -205,7 +208,7 @@ def create_shell_script(commands, output_script, parallel=False, max_processes=N
     
     # Make the script executable
     os.chmod(output_script, 0o755)
-    print(f"Created shell script: {output_script}")
+    print(f"\nCreated shell script: {output_script}")
     print(f"Run with: nohup bash {output_script} > {log_dir}/main_process.log 2>&1 &")
     print(f"To kill all processes: bash -c 'for p in $(cat pid/chunk_*.pid 2>/dev/null); do kill $p 2>/dev/null; done'")
 
@@ -390,7 +393,7 @@ def generate_combine_script(args, num_chunks):
         species_id = "h" if ".h.gz" in args.region_filename else "m"
         
         # Create the command to combine files
-        combine_cmd = f"cat {args.output_dir}/all_*.gz > {args.output_dir}/all.{species_id}.gz"
+        combine_cmd = f"cat {args.output_dir}/all_*_{species_id}.gz > {args.output_dir}/all.{species_id}.gz"
         f.write(f"echo \"Combining {num_chunks} chunks into a single file...\"\n")
         f.write(f"{combine_cmd} > log/combine_chunks.log 2>&1\n")
         f.write("if [ $? -eq 0 ]; then\n")

@@ -1,5 +1,6 @@
 position/**/*
 feature/**/*
+data/split/**/*
 *nfs*
 *.log
 *.h.gz
