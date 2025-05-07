@@ -36,12 +36,16 @@ def create_output_dir(directory):
     """Create directory if it doesn't exist."""
     Path(directory).mkdir(parents=True, exist_ok=True)
 
-def generate_commands(args, num_regions, num_chunks):
+def determine_species(region_filename):
+    """Determine the species from the region filename and return both short and full identifiers."""
+    if ".h.gz" in region_filename:
+        return "h", "human"
+    else:
+        return "m", "mouse"
+
+def generate_commands(args, num_regions, num_chunks, species_id, species_name):
     """Generate commands for processing all chunks."""
     commands = []
-    
-    # Determine species identifier (h or m) from the region filename
-    species_id = "h" if ".h.gz" in args.region_filename else "m"
     
     for i in range(1, num_chunks + 1):
         cmd = [
@@ -63,18 +67,18 @@ def generate_commands(args, num_regions, num_chunks):
     
     return commands
 
-def run_command(command, chunk_id, log_dir):
+def run_command(command, chunk_id, log_dir, species_name):
     """Execute a command, manage PID file, and return its output and status."""
-    pid_file = f"pid/chunk_{chunk_id}.pid"
-    log_file = f"{log_dir}/chunk_{chunk_id}.log"
+    pid_file = f"pid/{species_name}_chunk_{chunk_id}.pid"
+    log_file = f"{log_dir}/{species_name}_chunk_{chunk_id}.log"
     
     try:
         # Create log file with script start message
         with open(log_file, 'w') as f:
-            f.write(f"Starting chunk {chunk_id} at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Starting {species_name} chunk {chunk_id} at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"Command: {command}\n\n")
         
-        print(f"Executing chunk {chunk_id}: {command}")
+        print(f"Executing {species_name} chunk {chunk_id}: {command}")
         
         # Start the process and redirect output
         with open(log_file, 'a') as log:
@@ -108,7 +112,7 @@ def run_command(command, chunk_id, log_dir):
             
         return False, command, str(e)
 
-def create_shell_script(commands, output_script, parallel=False, max_processes=None, log_dir="log"):
+def create_shell_script(commands, output_script, parallel=False, max_processes=None, log_dir="log", species_id="", species_name=""):
     """Create a shell script with all the commands."""
     with open(output_script, 'w') as f:
         f.write("#!/bin/bash\n\n")
@@ -119,7 +123,7 @@ def create_shell_script(commands, output_script, parallel=False, max_processes=N
         f.write("cleanup() {\n")
         f.write("    echo \"Cleaning up PID files...\"\n")
         f.write("    # Kill all running processes\n")
-        f.write("    for pid_file in pid/chunk_*.pid; do\n")
+        f.write(f"    for pid_file in pid/{species_name}_chunk_*.pid; do\n")
         f.write("        if [ -f \"$pid_file\" ]; then\n")
         f.write("            pid=$(cat \"$pid_file\")\n")
         f.write("            echo \"Killing process $pid from $pid_file\"\n")
@@ -150,10 +154,10 @@ def create_shell_script(commands, output_script, parallel=False, max_processes=N
             f.write("        chunk_id=$1\n")
             f.write("        shift\n")
             f.write("        # Start the process and redirect output\n")
-            f.write("        \"$@\" > \"log/chunk_${chunk_id}.log\" 2>&1 &\n")
+            f.write(f"        \"$@\" > \"log/{species_name}_chunk_${{chunk_id}}.log\" 2>&1 &\n")
             f.write("        pid=$!\n")
-            f.write("        echo \"Started chunk ${chunk_id} with PID ${pid}\"\n")
-            f.write("        echo \"$pid\" > \"pid/chunk_${chunk_id}.pid\"\n")
+            f.write(f"        echo \"Started {species_name} chunk ${{chunk_id}} with PID ${{pid}}\"\n")
+            f.write(f"        echo \"$pid\" > \"pid/{species_name}_chunk_${{chunk_id}}.pid\"\n")
             f.write("    }\n")
             f.write("    export -f run_with_parallel\n\n")
             
@@ -177,14 +181,14 @@ def create_shell_script(commands, output_script, parallel=False, max_processes=N
             f.write("        chunk_id=$1\n")
             f.write("        shift\n")
             f.write("        # Start the process and redirect output\n")
-            f.write("        \"$@\" > \"log/chunk_${chunk_id}.log\" 2>&1 &\n")
+            f.write(f"        \"$@\" > \"log/{species_name}_chunk_${{chunk_id}}.log\" 2>&1 &\n")
             f.write("        pid=$!\n")
-            f.write("        echo \"Started chunk ${chunk_id} with PID ${pid}\"\n")
-            f.write("        echo \"$pid\" > \"pid/chunk_${chunk_id}.pid\"\n")
+            f.write(f"        echo \"Started {species_name} chunk ${{chunk_id}} with PID ${{pid}}\"\n")
+            f.write(f"        echo \"$pid\" > \"pid/{species_name}_chunk_${{chunk_id}}.pid\"\n")
             f.write("    }\n\n")
             
             for i, cmd in enumerate(commands, 1):
-                f.write(f"    # Process chunk {i}\n")
+                f.write(f"    # Process {species_name} chunk {i}\n")
                 f.write(f"    run_with_limit {i} {cmd}\n")
             
             f.write("\n    # Wait for all background jobs to finish\n")
@@ -193,42 +197,42 @@ def create_shell_script(commands, output_script, parallel=False, max_processes=N
         else:
             # Sequential execution
             for i, cmd in enumerate(commands, 1):
-                f.write(f"# Process chunk {i}\n")
-                f.write(f"echo \"Starting chunk {i} at $(date)\"\n")
+                f.write(f"# Process {species_name} chunk {i}\n")
+                f.write(f"echo \"Starting {species_name} chunk {i} at $(date)\"\n")
                 f.write(f"# Save PID\n")
-                f.write(f"{cmd} > \"log/chunk_{i}.log\" 2>&1 &\n")
+                f.write(f"{cmd} > \"log/{species_name}_chunk_{i}.log\" 2>&1 &\n")
                 f.write(f"pid=$!\n")
-                f.write(f"echo \"$pid\" > \"pid/chunk_{i}.pid\"\n")
-                f.write(f"echo \"Started chunk {i} with PID $pid\"\n")
+                f.write(f"echo \"$pid\" > \"pid/{species_name}_chunk_{i}.pid\"\n")
+                f.write(f"echo \"Started {species_name} chunk {i} with PID $pid\"\n")
                 f.write(f"wait $pid\n")
-                f.write(f"rm -f \"pid/chunk_{i}.pid\"\n")
-                f.write(f"echo \"Finished chunk {i} at $(date)\"\n\n")
+                f.write(f"rm -f \"pid/{species_name}_chunk_{i}.pid\"\n")
+                f.write(f"echo \"Finished {species_name} chunk {i} at $(date)\"\n\n")
         
         f.write("\necho \"All processing completed at $(date)\"\n")
     
     # Make the script executable
     os.chmod(output_script, 0o755)
     print(f"\nCreated shell script: {output_script}")
-    print(f"Run with: nohup bash {output_script} > {log_dir}/main_process.log 2>&1 &")
-    print(f"To kill all processes: bash -c 'for p in $(cat pid/chunk_*.pid 2>/dev/null); do kill $p 2>/dev/null; done'")
+    print(f"Run with: nohup bash {output_script} > {log_dir}/{species_name}_main_process.log 2>&1 &")
+    print(f"To kill all processes: bash -c 'for p in $(cat pid/{species_name}_chunk_*.pid 2>/dev/null); do kill $p 2>/dev/null; done'")
 
-def create_job_array_script(commands, output_script, job_array_type, mem_per_job="16G", time_per_job="12:00:00", log_dir="log"):
+def create_job_array_script(commands, output_script, job_array_type, mem_per_job="16G", time_per_job="12:00:00", log_dir="log", species_name=""):
     """Create a job array script based on the specified type (SLURM/SGE/LSF)."""
     with open(output_script, 'w') as f:
         f.write("#!/bin/bash\n")
         
         if job_array_type.lower() == "slurm":
             f.write(f"#SBATCH --array=1-{len(commands)}\n")
-            f.write("#SBATCH --job-name=LECIF_feature_agg\n")
-            f.write(f"#SBATCH --output={log_dir}/LECIF_feature_agg_%A_%a.out\n")
-            f.write(f"#SBATCH --error={log_dir}/LECIF_feature_agg_%A_%a.err\n")
+            f.write(f"#SBATCH --job-name=LECIF_{species_name}_feature_agg\n")
+            f.write(f"#SBATCH --output={log_dir}/LECIF_{species_name}_feature_agg_%A_%a.out\n")
+            f.write(f"#SBATCH --error={log_dir}/LECIF_{species_name}_feature_agg_%A_%a.err\n")
             f.write(f"#SBATCH --time={time_per_job}\n")
             f.write(f"#SBATCH --mem={mem_per_job}\n")
             f.write("#SBATCH --cpus-per-task=4\n")  # Request 4 CPUs for the 4 threads
             f.write("\n")
             f.write("mkdir -p pid\n")
             f.write("# Create PID file for this job\n")
-            f.write("echo $$ > pid/slurm_${SLURM_ARRAY_TASK_ID}.pid\n\n")
+            f.write(f"echo $$ > pid/{species_name}_slurm_${{SLURM_ARRAY_TASK_ID}}.pid\n\n")
             f.write("# Create commands array\n")
             f.write("declare -a commands\n")
             for i, cmd in enumerate(commands, 1):
@@ -241,20 +245,20 @@ def create_job_array_script(commands, output_script, job_array_type, mem_per_job
             f.write("${commands[$SLURM_ARRAY_TASK_ID]}\n\n")
             f.write("# Log the completion and remove PID file\n")
             f.write("echo \"Completed job array task ${SLURM_ARRAY_TASK_ID} at $(date)\"\n")
-            f.write("rm -f pid/slurm_${SLURM_ARRAY_TASK_ID}.pid\n")
+            f.write(f"rm -f pid/{species_name}_slurm_${{SLURM_ARRAY_TASK_ID}}.pid\n")
         
         elif job_array_type.lower() == "sge":
             f.write(f"#$ -t 1-{len(commands)}\n")
-            f.write("#$ -N LECIF_feature_agg\n")
-            f.write(f"#$ -o {log_dir}/LECIF_feature_agg_$JOB_ID_$TASK_ID.out\n")
-            f.write(f"#$ -e {log_dir}/LECIF_feature_agg_$JOB_ID_$TASK_ID.err\n")
+            f.write(f"#$ -N LECIF_{species_name}_feature_agg\n")
+            f.write(f"#$ -o {log_dir}/LECIF_{species_name}_feature_agg_$JOB_ID_$TASK_ID.out\n")
+            f.write(f"#$ -e {log_dir}/LECIF_{species_name}_feature_agg_$JOB_ID_$TASK_ID.err\n")
             f.write(f"#$ -l h_rt={time_per_job}\n")
             f.write(f"#$ -l h_vmem={mem_per_job}\n")
             f.write("#$ -pe threaded 4\n")  # Request 4 slots/CPUs for the 4 threads
             f.write("\n")
             f.write("mkdir -p pid\n")
             f.write("# Create PID file for this job\n")
-            f.write("echo $$ > pid/sge_${SGE_TASK_ID}.pid\n\n")
+            f.write(f"echo $$ > pid/{species_name}_sge_${{SGE_TASK_ID}}.pid\n\n")
             f.write("# Create commands array\n")
             f.write("declare -a commands\n")
             for i, cmd in enumerate(commands, 1):
@@ -267,19 +271,19 @@ def create_job_array_script(commands, output_script, job_array_type, mem_per_job
             f.write("${commands[$SGE_TASK_ID]}\n\n")
             f.write("# Log the completion and remove PID file\n")
             f.write("echo \"Completed job array task ${SGE_TASK_ID} at $(date)\"\n")
-            f.write("rm -f pid/sge_${SGE_TASK_ID}.pid\n")
+            f.write(f"rm -f pid/{species_name}_sge_${{SGE_TASK_ID}}.pid\n")
         
         elif job_array_type.lower() == "lsf":
-            f.write(f"#BSUB -J LECIF_feature_agg[1-{len(commands)}]\n")
-            f.write(f"#BSUB -o {log_dir}/LECIF_feature_agg_%J_%I.out\n")
-            f.write(f"#BSUB -e {log_dir}/LECIF_feature_agg_%J_%I.err\n")
+            f.write(f"#BSUB -J LECIF_{species_name}_feature_agg[1-{len(commands)}]\n")
+            f.write(f"#BSUB -o {log_dir}/LECIF_{species_name}_feature_agg_%J_%I.out\n")
+            f.write(f"#BSUB -e {log_dir}/LECIF_{species_name}_feature_agg_%J_%I.err\n")
             f.write(f"#BSUB -W {time_per_job}\n")
             f.write(f"#BSUB -M {mem_per_job}\n")
             f.write("#BSUB -n 4\n")  # Request 4 CPUs for the 4 threads
             f.write("\n")
             f.write("mkdir -p pid\n")
             f.write("# Create PID file for this job\n")
-            f.write("echo $$ > pid/lsf_${LSB_JOBINDEX}.pid\n\n")
+            f.write(f"echo $$ > pid/{species_name}_lsf_${{LSB_JOBINDEX}}.pid\n\n")
             f.write("# Create commands array\n")
             f.write("declare -a commands\n")
             for i, cmd in enumerate(commands, 1):
@@ -292,7 +296,7 @@ def create_job_array_script(commands, output_script, job_array_type, mem_per_job
             f.write("${commands[$LSB_JOBINDEX]}\n\n")
             f.write("# Log the completion and remove PID file\n")
             f.write("echo \"Completed job array task ${LSB_JOBINDEX} at $(date)\"\n")
-            f.write("rm -f pid/lsf_${LSB_JOBINDEX}.pid\n")
+            f.write(f"rm -f pid/{species_name}_lsf_${{LSB_JOBINDEX}}.pid\n")
         
         else:
             print(f"Unsupported job array type: {job_array_type}")
@@ -302,7 +306,7 @@ def create_job_array_script(commands, output_script, job_array_type, mem_per_job
     os.chmod(output_script, 0o755)
     print(f"Created job array script for {job_array_type}: {output_script}")
 
-def run_commands_parallel(commands, max_workers=None, log_dir="log"):
+def run_commands_parallel(commands, max_workers=None, log_dir="log", species_id="", species_name=""):
     """Execute commands in parallel using ProcessPoolExecutor."""
     if max_workers is None:
         max_workers = max(1, multiprocessing.cpu_count() - 1)
@@ -311,7 +315,7 @@ def run_commands_parallel(commands, max_workers=None, log_dir="log"):
     create_output_dir("pid")
     create_output_dir(log_dir)
     
-    print(f"Running {len(commands)} commands in parallel with {max_workers} workers")
+    print(f"Running {len(commands)} {species_name} commands in parallel with {max_workers} workers")
     print(f"Logs will be stored in {log_dir}/")
     print(f"PIDs will be stored in pid/")
     
@@ -319,7 +323,7 @@ def run_commands_parallel(commands, max_workers=None, log_dir="log"):
     def signal_handler(sig, frame):
         print(f"\nReceived signal {sig}. Cleaning up...")
         # Read all PIDs and kill them
-        for pid_file in Path("pid").glob("chunk_*.pid"):
+        for pid_file in Path("pid").glob(f"{species_name}_chunk_*.pid"):
             try:
                 with open(pid_file, 'r') as f:
                     pid = int(f.read().strip())
@@ -342,7 +346,7 @@ def run_commands_parallel(commands, max_workers=None, log_dir="log"):
     # Execute commands in parallel with proper chunk IDs
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         # Map each command to a chunk ID
-        futures = [executor.submit(run_command, cmd, i, log_dir) 
+        futures = [executor.submit(run_command, cmd, i, log_dir, species_name) 
                  for i, cmd in enumerate(commands, 1)]
         
         # Process results as they complete
@@ -380,32 +384,29 @@ def run_commands_parallel(commands, max_workers=None, log_dir="log"):
     
     return success_count == len(commands)
 
-def generate_combine_script(args, num_chunks):
+def generate_combine_script(args, num_chunks, species_id, species_name):
     """Generate a script to combine all output chunks."""
-    combine_script = os.path.join(args.output_dir, "combine_chunks.sh")
+    combine_script = os.path.join(args.output_dir, f"combine_{species_name}_chunks.sh")
     with open(combine_script, 'w') as f:
         f.write("#!/bin/bash\n\n")
-        f.write("# Script to combine all processed chunks into a single file\n\n")
+        f.write(f"# Script to combine all processed {species_name} chunks into a single file\n\n")
         f.write("# Create log directory\n")
         f.write("mkdir -p log\n\n")
         
-        # Species identifier (h or m) from the region filename
-        species_id = "h" if ".h.gz" in args.region_filename else "m"
-        
         # Create the command to combine files
         combine_cmd = f"cat {args.output_dir}/all_*_{species_id}.gz > {args.output_dir}/all.{species_id}.gz"
-        f.write(f"echo \"Combining {num_chunks} chunks into a single file...\"\n")
-        f.write(f"{combine_cmd} > log/combine_chunks.log 2>&1\n")
+        f.write(f"echo \"Combining {num_chunks} {species_name} chunks into a single file...\"\n")
+        f.write(f"{combine_cmd} > log/combine_{species_name}_chunks.log 2>&1\n")
         f.write("if [ $? -eq 0 ]; then\n")
         f.write("    echo \"Combination complete.\"\n")
         f.write("else\n")
-        f.write("    echo \"Error during combination. Check log/combine_chunks.log\"\n")
+        f.write(f"    echo \"Error during combination. Check log/combine_{species_name}_chunks.log\"\n")
         f.write("fi\n")
     
     # Make the script executable
     os.chmod(combine_script, 0o755)
     print(f"Created combine script: {combine_script}")
-    print(f"Run with: nohup bash {combine_script} > log/combine_chunks_main.log 2>&1 &")
+    print(f"Run with: nohup bash {combine_script} > log/combine_{species_name}_chunks_main.log 2>&1 &")
 
 def main():
     # Parse command line arguments
@@ -454,6 +455,10 @@ def main():
     create_output_dir(args.log_dir)
     create_output_dir("pid")
     
+    # Determine species from region filename
+    species_id, species_name = determine_species(args.region_filename)
+    print(f"Detected species: {species_name} (id: {species_id})")
+    
     # Count total regions
     print(f"Counting regions in {args.region_filename}...")
     num_regions = count_regions(args.region_filename)
@@ -464,13 +469,13 @@ def main():
     print(f"Number of chunks (with {args.chunk_size} regions per chunk): {num_chunks}")
     
     # Generate commands for all chunks
-    commands = generate_commands(args, num_regions, num_chunks)
+    commands = generate_commands(args, num_regions, num_chunks, species_id, species_name)
     
     # Handle execution based on options
     if args.execute:
         print(f"Executing commands directly with logs in {args.log_dir}/")
         if args.parallel:
-            success = run_commands_parallel(commands, args.max_processes, args.log_dir)
+            success = run_commands_parallel(commands, args.max_processes, args.log_dir, species_id, species_name)
             if success:
                 print("All commands completed successfully")
             else:
@@ -478,22 +483,23 @@ def main():
         else:
             print("Running commands sequentially...")
             for i, cmd in enumerate(commands, 1):
-                success, _, output = run_command(cmd, i, args.log_dir)
+                success, _, output = run_command(cmd, i, args.log_dir, species_name)
                 if not success:
                     print(f"Command {i} failed: {cmd}")
                     print(output)
     else:
         # Create output script
         if args.job_array != 'none':
-            script_path = os.path.join(args.output_dir, f"process_regions_job_array_{args.job_array}.sh")
+            script_path = os.path.join(args.output_dir, f"process_{species_name}_regions_job_array_{args.job_array}.sh")
             create_job_array_script(commands, script_path, args.job_array, 
-                                  args.mem_per_job, args.time_per_job, args.log_dir)
+                                  args.mem_per_job, args.time_per_job, args.log_dir, species_name)
         else:
-            script_path = os.path.join(args.output_dir, "process_regions.sh")
-            create_shell_script(commands, script_path, args.parallel, args.max_processes, args.log_dir)
+            script_path = os.path.join(args.output_dir, f"process_{species_name}_regions.sh")
+            create_shell_script(commands, script_path, args.parallel, args.max_processes, args.log_dir, 
+                               species_id, species_name)
         
         # Create a script to combine all processed chunks
-        generate_combine_script(args, num_chunks)
+        generate_combine_script(args, num_chunks, species_id, species_name)
         
         print("\nWhat to do next:")
         if args.job_array != 'none':
@@ -505,14 +511,14 @@ def main():
                 print(f"1. Submit the job array: bsub < {script_path}")
         else:
             print(f"1. Run the script with nohup for background execution:")
-            print(f"   nohup bash {script_path} > {args.log_dir}/main_process.log 2>&1 &")
-            print(f"   echo $! > pid/main_process.pid  # Save the main process PID")
+            print(f"   nohup bash {script_path} > {args.log_dir}/{species_name}_main_process.log 2>&1 &")
+            print(f"   echo $! > pid/{species_name}_main_process.pid  # Save the main process PID")
         
-        print(f"2. After all chunks are processed, run: nohup bash {args.output_dir}/combine_chunks.sh > {args.log_dir}/combine_chunks_main.log 2>&1 &")
+        print(f"2. After all chunks are processed, run: nohup bash {args.output_dir}/combine_{species_name}_chunks.sh > {args.log_dir}/combine_{species_name}_chunks_main.log 2>&1 &")
         print("\nProcess Management:")
         print(f"- All PIDs will be stored in the pid/ directory")
-        print(f"- To kill all running processes: for p in $(cat pid/chunk_*.pid 2>/dev/null); do kill $p; done")
-        print(f"- To check status: ls -l {args.log_dir}/ | grep chunk")
+        print(f"- To kill all running processes: for p in $(cat pid/{species_name}_chunk_*.pid 2>/dev/null); do kill $p; done")
+        print(f"- To check status: ls -l {args.log_dir}/ | grep {species_name}_chunk")
 
 if __name__ == "__main__":
     main() 

@@ -20,7 +20,7 @@ SHEET_DIR_MAP = {
     "1c. Human ChromHMM": "hg19_ChromHMM",
     # "1d. Human CAGE": "hg19_CAGE",
     "1e. Human RNA-seq": "hg19_RNAseq",
-    "1f. Mouse DNase-seq, ChIP-seq": "mm10_DNaseqChIPseq",
+    "1f. Mouse DNase-seq, ChIP-seq": "mm10_DNaseChIPseq",
     "1g. Mouse ChromHMM": "mm10_ChromHMM",
     # "1h. Mouse CAGE": "mm10_CAGE",
     "1i. Mouse RNA-seq": "mm10_RNAseq",

@@ -208,8 +208,6 @@ def readFeatures(dnase_chipseq_dir,chromhmm_dir,cage_dir,rnaseq_dir,chromhmm_num
     thread3.join()
     thread4.join()
 
-    # ! Real values are None now?
-
     return active_indices,thread4.real_values
 
 # Write aggregated features for each region

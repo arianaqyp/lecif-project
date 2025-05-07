@@ -98,8 +98,10 @@ def main():
     held_out_mouse_chrom = set(args.held_out_mouse_chrom)
 
     ### Start reading and writing
-    hin = gzip.open(args.human_feature_filename)
-    min = gzip.open(args.mouse_feature_filename)
+    # hin = gzip.open(args.human_feature_filename)
+    hin = gzip.open(args.human_feature_data_filename, 'rb')
+    # min = gzip.open(args.mouse_feature_filename)
+    min = gzip.open(args.mouse_feature_data_filename, 'rb')
 
     with gzip.open(args.output_dir+'/odd_training.h.gz','wb') as human_odd_training_out,\
         gzip.open(args.output_dir+'/odd_validation.h.gz','wb') as human_odd_validation_out, \
